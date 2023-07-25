@@ -1,0 +1,47 @@
+name: Test Build
+
+on:
+  push:
+    branches: '*'
+  pull_request:
+    branches: '*'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: "dev-infra-273822"
+  GCP_BUCKET_ID: "icu4x-pr-artifacts"
+
+jobs:
+  docs:
+    name: "Demo GCS Upload"
+    runs-on: "ubuntu-latest"
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Create file for upload
+      run: |
+        mkdir -p demo
+        echo "Hello World" > demo/hello.txt
+
+    - id: gcp-auth
+      name: "Authenticate to Google Cloud"
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: "projects/66042061814/locations/global/workloadIdentityPools/icu4x-gha-pool1/providers/icu4x-gha-provider1"
+        service_account: "icu4x-github-actions@dev-infra-273822.iam.gserviceaccount.com"
+
+    - name: "Set up Google Cloud SDK"
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Upload demo to Google Cloud Storage
+      run: |
+        gsutil -m cp -r demo gs://${{ env.GCP_BUCKET_ID }}/gha/${{ github.sha }}/demo
+    - name: "⭐⭐⭐ Links to Uploaded Artifacts ⭐⭐⭐"
+      run: |
+        echo "::group::📖 Demo Hello World"
+        echo "http://${{ env.GCP_BUCKET_ID }}.storage.googleapis.com/gha/${{ github.sha }}/demo/hello.txt"
+        echo "::endgroup::"
